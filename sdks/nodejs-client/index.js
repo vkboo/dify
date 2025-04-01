@@ -1,58 +1,58 @@
-import axios from "axios";
+import ky from 'ky';
 export const BASE_URL = "https://api.dify.ai/v1";
 
 export const routes = {
   //  app's
   feedback: {
-    method: "POST",
+    method: "post",
     url: (message_id) => `/messages/${message_id}/feedbacks`,
   },
   application: {
-    method: "GET",
+    method: "get",
     url: () => `/parameters`,
   },
   fileUpload: {
-    method: "POST",
+    method: "post",
     url: () => `/files/upload`,
   },
   textToAudio: {
-    method: "POST",
+    method: "post",
     url: () => `/text-to-audio`,
   },
   getMeta: {
-    method: "GET",
+    method: "get",
     url: () => `/meta`,
   },
 
   // completion's
   createCompletionMessage: {
-    method: "POST",
+    method: "post",
     url: () => `/completion-messages`,
   },
 
   // chat's
   createChatMessage: {
-    method: "POST",
+    method: "post",
     url: () => `/chat-messages`,
   },
-  getSuggested:{
-    method: "GET",
+  getSuggested: {
+    method: "get",
     url: (message_id) => `/messages/${message_id}/suggested`,
   },
   stopChatMessage: {
-    method: "POST",
+    method: "post",
     url: (task_id) => `/chat-messages/${task_id}/stop`,
   },
   getConversations: {
-    method: "GET",
+    method: "get",
     url: () => `/conversations`,
   },
   getConversationMessages: {
-    method: "GET",
+    method: "get",
     url: () => `/messages`,
   },
   renameConversation: {
-    method: "POST",
+    method: "post",
     url: (conversation_id) => `/conversations/${conversation_id}/name`,
   },
   deleteConversation: {
@@ -60,17 +60,17 @@ export const routes = {
     url: (conversation_id) => `/conversations/${conversation_id}`,
   },
   audioToText: {
-    method: "POST",
+    method: "post",
     url: () => `/audio-to-text`,
   },
 
   // workflow‘s
   runWorkflow: {
-    method: "POST",
+    method: "post",
     url: () => `/workflows/run`,
   },
   stopWorkflow: {
-    method: "POST",
+    method: "post",
     url: (task_id) => `/workflows/${task_id}/stop`,
   }
 
@@ -103,28 +103,19 @@ export class DifyClient {
     };
 
     const url = `${this.baseUrl}${endpoint}`;
-    let response;
-    if (stream) {
-      response = await axios({
-        method,
-        url,
-        data,
-        params,
-        headers,
-        responseType: "stream",
-      });
-    } else {
-      response = await axios({
-        method,
-        url,
-        ...(method !== "GET" && { data }),
-        params,
-        headers,
-        responseType: "json",
-      });
-    }
+    // let response;
 
-    return response;
+    const response = await ky(url, {
+      method,
+      searchParams: params,
+      json: data,
+      headers,
+    });
+    if (stream) {
+      return response.body;
+    } else {
+      return response.json();
+    }
   }
 
   messageFeedback(message_id, rating, user) {
@@ -333,19 +324,18 @@ export class ChatClient extends DifyClient {
 }
 
 export class WorkflowClient extends DifyClient {
-  run(inputs,user,stream) {
-    const data = { 
-      inputs, 
+  run(inputs, user, stream) {
+    const data = {
+      inputs,
       response_mode: stream ? "streaming" : "blocking",
-      user 
+      user
     };
-  
     return this.sendRequest(
-        routes.runWorkflow.method,
-        routes.runWorkflow.url(),
-        data,
-        null,
-        stream
+      routes.runWorkflow.method,
+      routes.runWorkflow.url(),
+      data,
+      null,
+      stream
     );
   }
 
